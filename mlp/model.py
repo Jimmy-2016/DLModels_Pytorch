@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 from torchsummary import summary
 
+# this is added to the github
+
 class block(nn.Module):
     def __init__(self, num_in, num_out, ifend):
         super().__init__()
