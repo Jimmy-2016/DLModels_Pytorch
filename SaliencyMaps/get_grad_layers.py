@@ -91,7 +91,7 @@ score_max.backward()
 grads = []
 names = []
 for layer in conv_layers:
-    grads.append(layer.grad)
+    grads.append(layer.weight.grad)
     names.append(str(layer))
 print(len(grads))
 for feature_map in grads:
@@ -110,5 +110,8 @@ plt.imshow(saliency[0], cmap=plt.cm.hot)
 plt.axis('off')
 plt.show()
 
+
+
+##
 
 plt.show()
