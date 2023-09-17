@@ -85,8 +85,7 @@ for feature_map in outputs:
 processed = []
 for feature_map in outputs:
     feature_map = feature_map.squeeze(0)
-    gray_scale = torch.sum(feature_map,0)
-    gray_scale = gray_scale / feature_map.shape[0]
+    gray_scale = torch.mean(feature_map, 0)
     processed.append(gray_scale.data.cpu().numpy())
 for fm in processed:
     print(fm.shape)
