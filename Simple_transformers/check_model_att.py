@@ -17,6 +17,29 @@ for module in model.modules():
         module.register_forward_hook(save_output)
 
 
+model_weights =[]
+att_layers = []
+model_children = list(model.children())
+counter = 0
+for i in range(len(model_children)):
+    # if 'transformer' in type(model_children[i]):
+    if type(model_children[i]) == nn.MultiheadAttention:
+        counter += 1
+        model_weights.append(model_children[i].weight)
+        att_layers.append(model_children[i])
+    elif type(model_children[i]) == nn.Sequential:
+        for j in range(len(model_children[i])):
+            for child in model_children[i][j].children():
+                if type(child) == nn.MultiheadAttention:
+                    counter+=1
+                    model_weights.append(child.weight)
+                    att_layers.append(child)
+print(f"Total attention layers: {counter}")
+# print("conv_layers")
+
+
+
+
 all_params = []
 for name, param in model.named_parameters():
     if 'self_attn.out_proj.weight' in name:
