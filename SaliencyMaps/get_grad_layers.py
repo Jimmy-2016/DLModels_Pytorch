@@ -56,7 +56,7 @@ for i in range(len(model_children)):
                 if type(child) == nn.Conv2d:
                     counter += 1
                     model_weights.append(child.weight)
-                    conv_layers.append(child.requires_grad_())
+                    conv_layers.append(child)
 print(f"Total convolution layers: {counter}")
 print("conv_layers")
 
@@ -91,11 +91,11 @@ score_max.backward()
 grads = []
 names = []
 for layer in conv_layers:
-    grads.append(layer.weight.grad)
+    grads.append(torch.max(layer.weight.grad.abs(), dim=0))
     names.append(str(layer))
 print(len(grads))
-for feature_map in grads:
-    print(feature_map.shape)
+# for feature_map in grads:
+#     print(feature_map.shape)
 
 
 '''
@@ -108,10 +108,13 @@ saliency, _ = torch.max(X.grad.data.abs(), dim=1)
 # code to plot the saliency map as a heatmap
 plt.imshow(saliency[0], cmap=plt.cm.hot)
 plt.axis('off')
-plt.show()
 
 
 
 ##
+
+for i in range(len(grads)):
+    plt.figure()
+    plt.imshow(grads[i][0], cmap=plt.cm.hot)
 
 plt.show()
