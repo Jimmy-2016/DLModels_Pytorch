@@ -40,9 +40,29 @@ print(device)
 
 
 ##
+model_weights =[]
+conv_layers = []
+
+model_children = list(model.children())
+counter = 0
+for i in range(len(model_children)):
+    if type(model_children[i]) == nn.Conv2d:
+        counter += 1
+        model_weights.append(model_children[i].weight)
+        conv_layers.append(model_children[i])
+    elif type(model_children[i]) == nn.Sequential:
+        for j in range(len(model_children[i])):
+            for child in model_children[i][j].children():
+                if type(child) == nn.Conv2d:
+                    counter += 1
+                    model_weights.append(child.weight)
+                    conv_layers.append(child.requires_grad_())
+print(f"Total convolution layers: {counter}")
+print("conv_layers")
+
+##
 # preprocess the image
 X = transforms(img)
-# X = X[1:4, :]
 X = X.unsqueeze(0)
 
 # we would run the model in evaluation mode
@@ -67,6 +87,16 @@ backward function on score_max performs the backward pass in the computation gra
 score_max with respect to nodes in the computation graph
 '''
 score_max.backward()
+
+grads = []
+names = []
+for layer in conv_layers:
+    grads.append(layer.grad)
+    names.append(str(layer))
+print(len(grads))
+for feature_map in grads:
+    print(feature_map.shape)
+
 
 '''
 Saliency would be the gradient with respect to the input image now. But note that the input image has 3 channels,
