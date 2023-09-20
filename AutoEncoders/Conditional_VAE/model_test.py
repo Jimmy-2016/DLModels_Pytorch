@@ -29,7 +29,7 @@ model.load_state_dict(torch.load(PATH))
 
 num_example = 6
 noise = torch.randn((num_example, z_dim))
-condition_num = 0
+condition_num = 6
 label = condition_num * torch.ones(num_example).to(torch.int64)
 z = noise
 z = torch.cat((z, model.embedding(label)), dim=-1)
@@ -40,5 +40,7 @@ for i in range(num_example):
     plt.imshow(np.squeeze(predict[i, :, :].detach()))
 
 
-plt.colorbar()
+
+##
+
 plt.show()
