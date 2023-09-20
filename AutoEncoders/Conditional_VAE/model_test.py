@@ -33,11 +33,10 @@ num_example = 6
 # epsilon = torch.randn_like(sigma)
 # z = mu + sigma * epsilon
 noise = torch.randn((num_example, z_dim))
-condition_num = 4
+condition_num = 8
 label = condition_num * torch.ones(num_example).to(torch.int64)
 z = noise
 z = torch.cat((z, model.embedding(label)), dim=-1)
-
 predict = model.decoder(model.fc(z))
 
 for i in range(num_example):
