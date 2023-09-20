@@ -165,10 +165,10 @@ if __name__ == '__main__':
                 num_targetN=5,
                 conditional=0)
 
-    print(model(input))
+    print(model(input, 1))
     print(model)
-    summary(model, (1, 28, 28), batch_size=-1)
-    print(model(input)[0].shape)
+    summary(model, (2, 28, 28), batch_size=-1)
+    print(model(input, 1)[0].shape)
 
 
 
