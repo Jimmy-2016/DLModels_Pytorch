@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 
 ## Params
-n_epochs = 10
+n_epochs = 2
 batch_size_train = 128
 batch_size_test = 6
 log_interval = 2
@@ -106,14 +106,16 @@ for i in range(n_epochs):
    for _, (tmpdata, tmptar) in enumerate(train_loader):
 
        # if Conditional:
-       #     tmpmat = tmptar.unsqueeze(0)*torch.ones(tmpdata.shape[-2], tmpdata.shape[-1]).unsqueeze(2)
-       #     tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-       #     input = torch.concat((tmpdata, tmpmat), dim=1)
+       tmpmat = tmptar.unsqueeze(0)*torch.ones(tmpdata.shape[-2], tmpdata.shape[-1]).unsqueeze(2)
+       tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
+       input = torch.concat((tmpdata, tmpmat), dim=1)
        # else:
        #     input=tmpdata
-       input = tmpdata
+       # input = tmpdata
+       # input = torch.concat((tmpdata, tmptar * torch.ones_like(tmpdata)), dim=1)
 
-       re_const, mu, sigma = model(input, F.one_hot(tmptar))
+
+       re_const, mu, sigma = model(input, tmptar)
 
        optimizer.zero_grad()
        tmptar = F.one_hot(tmptar)
@@ -135,9 +137,13 @@ torch.save(optimizer.state_dict(), './saved_model/optimizer1.pth')
 ##
 exmaple = enumerate(test_loader)
 batch_index, (data, target) = next(exmaple)
-input = data
+tmpmat = target.unsqueeze(0)*torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
+tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
+input = torch.concat((data, tmpmat), dim=1)
 
-predict = model(input, F.one_hot(target))[0]
+# input = data
+
+predict = model(input, target)[0]
 
 for i in range(6):
     fig = plt.figure()

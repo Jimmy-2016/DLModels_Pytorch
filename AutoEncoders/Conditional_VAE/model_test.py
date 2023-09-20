@@ -9,8 +9,8 @@ import torch.optim as optim
 import numpy as np
 from torch.distributions.multivariate_normal import MultivariateNormal
 
-# torch.manual_seed(1)
-# np.random.seed(1)
+torch.manual_seed(1)
+np.random.seed(1)
 
 
 PATH = './saved_model/model1.pth'
@@ -27,17 +27,16 @@ model = VAE(CNNLayerEncoder=[8, 16],
             conditional=1)
 model.load_state_dict(torch.load(PATH))
 
-num_example = 10
+num_example = 6
 # sigma = torch.randn((num_example, z_dim))
 # mu = torch.randn((num_example, z_dim))
 # epsilon = torch.randn_like(sigma)
 # z = mu + sigma * epsilon
 noise = torch.randn((num_example, z_dim))
-condition_num = 1
-label = torch.zeros(num_example, 10).to(torch.int64)
-label[:, condition_num] = 3
+condition_num = 4
+label = condition_num * torch.ones(num_example).to(torch.int64)
 z = noise
-z = torch.cat((z, model.embedding(label)[:, 0, :]), dim=-1)
+z = torch.cat((z, model.embedding(label)), dim=-1)
 
 predict = model.decoder(model.fc(z))
 

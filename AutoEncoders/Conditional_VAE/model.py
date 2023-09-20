@@ -81,7 +81,7 @@ class VAE(nn.Module):
         self.encoder_unfaltten = self._makeLayer_encoder(0)
         self.conditional = conditional
         self.num_targetN = num_targetN
-        data = torch.rand((60, 1, 28, 28))
+        data = torch.rand((60, 2, 28, 28))
         self.nhid = self.encoder_faltten(data).shape[-1]
         self.out_shape = self.encoder_unfaltten(data).shape
         self.emsize = self.out_shape[1:]
@@ -98,7 +98,7 @@ class VAE(nn.Module):
 
     def _makeLayer_encoder(self, flatten):
         layers = []
-        layers.append(CNNBlock(1,
+        layers.append(CNNBlock(2,
                                self.CNNlayer_encoder[0],
                                filter_size=self.filter_size,
                                stride=self.stride,
@@ -146,7 +146,7 @@ class VAE(nn.Module):
         mu, sigma = self.fc_mean(x), self.fc_std(x)
         epsilon = torch.randn_like(sigma)
         z = mu + sigma * epsilon
-        label = self.embedding(label)[:, 0, :]
+        label = self.embedding(label)
         z = torch.cat((z, label), dim=-1)
         z = self.fc(z)
         return self.decoder(z), mu, sigma
