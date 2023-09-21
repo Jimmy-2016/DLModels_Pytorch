@@ -9,7 +9,7 @@ import torchvision
 import umap
 
 
-batch_size_test = 20000
+batch_size_test = 2000
 
 test_loader = torch.utils.data.DataLoader(
     torchvision.datasets.MNIST('./data/', train=False, download=True,

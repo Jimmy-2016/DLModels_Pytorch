@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 
 ## Params
-n_epochs = 2
-batch_size_train = 128
+n_epochs = 3
+batch_size_train = 64
 batch_size_test = 6
 log_interval = 2
 Conditional = 1
