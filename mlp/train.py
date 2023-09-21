@@ -16,7 +16,6 @@ log_interval = 2
 
 lr = 0.001
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 print(device)
 
 
