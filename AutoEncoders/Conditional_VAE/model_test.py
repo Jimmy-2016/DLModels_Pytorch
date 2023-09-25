@@ -16,8 +16,8 @@ np.random.seed(1)
 PATH = './saved_model/model1.pth'
 
 z_dim = 4
-model = VAE(CNNLayerEncoder=[8, 16],
-                CNNLayerDecoder=[16, 8, 1],
+model = VAE(CNNLayerEncoder=[10, 16],
+                CNNLayerDecoder=[16, 10, 1],
                   z_dim=4,
                   stride=2,
                   filter_size=3,
@@ -29,7 +29,7 @@ model.load_state_dict(torch.load(PATH))
 
 num_example = 6
 noise = torch.randn((num_example, z_dim))
-condition_num = 2
+condition_num = 7
 label = condition_num * torch.ones(num_example).to(torch.int64)
 z = noise
 z = torch.cat((z, model.embedding(label)), dim=-1)

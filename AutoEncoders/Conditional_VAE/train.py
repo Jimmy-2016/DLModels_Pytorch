@@ -73,8 +73,8 @@ test_loader = torch.utils.data.DataLoader(
 
 # disp_example(train_loader, 5)
 
-model = VAE(CNNLayerEncoder=[8, 16],
-                CNNLayerDecoder=[16, 8, 1],
+model = VAE(CNNLayerEncoder=[10, 16],
+                CNNLayerDecoder=[16, 10, 1],
                   z_dim=4,
                   stride=2,
                   filter_size=3,

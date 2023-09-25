@@ -31,8 +31,8 @@ np.random.seed(1)
 PATH = './saved_model/model1.pth'
 
 z_dim = 4
-model = VAE(CNNLayerEncoder=[8, 16],
-                CNNLayerDecoder=[16, 8, 1],
+model = VAE(CNNLayerEncoder=[10, 16],
+                CNNLayerDecoder=[16, 10, 1],
                   z_dim=4,
                   stride=2,
                   filter_size=3,
