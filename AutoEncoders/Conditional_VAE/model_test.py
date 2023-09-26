@@ -29,7 +29,7 @@ model.load_state_dict(torch.load(PATH))
 
 num_example = 6
 noise = torch.randn((num_example, z_dim))
-condition_num = 7
+condition_num = 1
 label = condition_num * torch.ones(num_example).to(torch.int64)
 z = noise
 z = torch.cat((z, model.embedding(label)), dim=-1)
