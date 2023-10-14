@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 
 ## Params
-n_epochs = 10
+n_epochs = 3
 batch_size_train = 64
 batch_size_test = 6
 log_interval = 2
@@ -130,8 +130,8 @@ for i in range(n_epochs):
        print('Train Epoch: {} \tLoss: {:.6f}'.format(
            i,  loss.item()))
 
-torch.save(model.state_dict(), './saved_model/model1.pth')
-torch.save(optimizer.state_dict(), './saved_model/optimizer1.pth')
+torch.save(model.state_dict(), './saved_model/model2.pth')
+torch.save(optimizer.state_dict(), './saved_model/optimizer2.pth')
 
 
 ##
