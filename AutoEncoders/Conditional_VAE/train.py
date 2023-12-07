@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 
 ## Params
-n_epochs = 10
+n_epochs = 2
 batch_size_train = 64
 batch_size_test = 6
 log_interval = 2
@@ -119,7 +119,7 @@ for i in range(n_epochs):
 
        optimizer.zero_grad()
        tmptar = F.one_hot(tmptar)
-       loss, bce, kl = loss_fn(re_const, tmpdata[:, :, :26, :26].float(), mu, sigma)
+       loss, bce, kl = loss_fn(re_const, tmpdata[:, :, :26, :26].float(), mu, torch.log(sigma**2))
        loss.backward()
        optimizer.step()
        # correct += (predict.argmax(axis=1) == tmptar.argmax(axis=1)).sum()
