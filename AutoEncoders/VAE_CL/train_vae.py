@@ -20,6 +20,11 @@ print(device)
 
 Conditional = True
 
+Contrast = True
+
+if Contrast == True:
+    Conditional = False
+
 
 def disp_example(loader, indx):
     exmaple = enumerate(loader)
@@ -80,7 +85,7 @@ def loss_fn(recon_x, x, mu, logvar):
     # KLD = 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     # logvar = torch.log((Sigma + 1e-8)**2)
     # KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-    KLD = - 0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    KLD = - 0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
 
     return BCE + KLD, BCE, KLD
 
@@ -101,11 +106,27 @@ for i in range(n_epochs):
        input = tmpdata.view(tmpdata.shape[0], -1)
        re_const, mu, sigma, encoder_out, z = model(input, tmptar)
 
+       targetdist = torch.zeros((len(tmptar), len(tmptar)))
+       for tri in range(10):
+           indx = torch.where(tmptar == tri)[0]
+           targetdist[np.ix_(indx, indx)] = 1
+
        activations = []
 
        optimizer.zero_grad()
        # tmptar = F.one_hot(tmptar)
        loss, bce, kl = loss_fn(re_const, input, mu, torch.log(torch.pow(sigma + 1e-8, 2)))
+
+       contrast_loss = 0
+       if Contrast:
+           dist = torch.cdist(mu, mu)
+
+           contrast_loss = (1 - targetdist) * torch.pow(dist, 2) \
+                  + (targetdist) * torch.pow(torch.clamp(2 - dist, min=0.0), 2)
+           contrast_loss = torch.mean(contrast_loss)
+
+           # contrastive_loss(dist, targetdist, margin=2)
+       loss += contrast_loss
        loss.backward()
        optimizer.step()
 
@@ -117,8 +138,11 @@ for i in range(n_epochs):
 
 if Conditional:
     torch.save(model.state_dict(), './saved_model/con_model.pth')
+elif Contrast:
+    torch.save(model.state_dict(), './saved_model/Contrast_model.pth')
 else:
     torch.save(model.state_dict(), './saved_model/nocon_model.pth')
+
 
 torch.save(optimizer.state_dict(), './saved_model/optimizer.pth')
 

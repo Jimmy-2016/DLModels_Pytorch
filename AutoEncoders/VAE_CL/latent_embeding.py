@@ -28,9 +28,15 @@ torch.manual_seed(1)
 np.random.seed(1)
 
 Conditional = True
+Contrast = True
+
+if Contrast == True:
+    Conditional = False
 
 if Conditional:
     PATH = './saved_model/con_model.pth'
+elif Contrast:
+    PATH = './saved_model/Contrast_model.pth'
 else:
     PATH = './saved_model/nocon_model.pth'
 

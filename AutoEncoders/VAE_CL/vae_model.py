@@ -91,6 +91,22 @@ class myVAE(nn.Module):
         # return self.fc(x)
 
 
+# class contrastive_loss(nn.Module):
+#     def __init__(self, margin=2):
+#         super(contrastive_loss, self).__init__()
+#         self.margin = margin
+#
+#     def forward(self, dist, label):
+#         # dist = torch.nn.functional.pairwise_distance(x1, x2)(x1, x2)
+#
+#
+#         return loss
+#
+# # def criterion(x1, x2, label, margin: float = 2.0):
+
+
+
+
 
 if __name__ == "__main__":
     layers = [784, 50, 40, 10]
