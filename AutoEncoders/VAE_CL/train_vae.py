@@ -18,6 +18,7 @@ lr = 0.001
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
+Conditional = True
 
 
 def disp_example(loader, indx):
@@ -78,14 +79,15 @@ def loss_fn(recon_x, x, mu, logvar):
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
     # KLD = 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     # logvar = torch.log((Sigma + 1e-8)**2)
-    KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+    # KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+    KLD = - 0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
     return BCE + KLD, BCE, KLD
 
 
 # disp_example(train_loader, 5)
 
-model = myVAE(layers=[784, 50, 40, 10]).to(device)
+model = myVAE(layers=[784, 100, 50, 10], conditional=Conditional).to(device)
 modellayers = list(model.children())[0]
 model
 criteria = nn.MSELoss()
@@ -96,31 +98,16 @@ for i in range(n_epochs):
    correct = 0
 
    for _, (tmpdata, tmptar) in enumerate(train_loader):
-
-       # if Conditional:
-       # tmpmat = tmptar.unsqueeze(0)*torch.ones(tmpdata.shape[-2], tmpdata.shape[-1]).unsqueeze(2)
-       # tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-       # input = torch.concat((tmpdata, tmpmat), dim=1)
-
-
-
-       # re_const, mu, sigma = model(input, tmptar)
        input = tmpdata.view(tmpdata.shape[0], -1)
-       re_const, mu, sigma, encoder_out, z = model(input)
+       re_const, mu, sigma, encoder_out, z = model(input, tmptar)
 
        activations = []
-       # layeractive = input
-       # for li in modellayers:
-       #     input = li(input)
-       #     activations.append(input)
-
 
        optimizer.zero_grad()
-       tmptar = F.one_hot(tmptar)
-       loss, bce, kl = loss_fn(re_const, input, mu, sigma)
+       # tmptar = F.one_hot(tmptar)
+       loss, bce, kl = loss_fn(re_const, input, mu, torch.log(torch.pow(sigma + 1e-8, 2)))
        loss.backward()
        optimizer.step()
-       # correct += (predict.argmax(axis=1) == tmptar.argmax(axis=1)).sum()
 
    train_loss.append(loss.item())
 
@@ -128,20 +115,21 @@ for i in range(n_epochs):
        print('Train Epoch: {} \tLoss: {:.6f}'.format(
            i,  loss.item()))
 
-torch.save(model.state_dict(), './saved_model/model1.pth')
-torch.save(optimizer.state_dict(), './saved_model/optimizer1.pth')
+if Conditional:
+    torch.save(model.state_dict(), './saved_model/con_model.pth')
+else:
+    torch.save(model.state_dict(), './saved_model/nocon_model.pth')
+
+torch.save(optimizer.state_dict(), './saved_model/optimizer.pth')
 
 
 ##
 exmaple = enumerate(test_loader)
 batch_index, (data, target) = next(exmaple)
-# tmpmat = target.unsqueeze(0)*torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
-# tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-# input = torch.concat((data, tmpmat), dim=1)
 
 input = data.squeeze(1).view(data.shape[0], -1)
 
-predict = model(input)[0]
+predict = model(input, target)[0]
 
 for i in range(6):
     fig = plt.figure()
