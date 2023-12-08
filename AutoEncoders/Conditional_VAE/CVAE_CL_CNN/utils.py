@@ -5,6 +5,8 @@ from torchsummary import summary
 import torch.nn.functional as F
 
 
+
+
 class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.shape[0], -1)
@@ -67,7 +69,7 @@ class DCNNBlock(nn.Module):
 
 
 class VAE(nn.Module):
-    def __init__(self, CNNLayerEncoder, CNNLayerDecoder, z_dim, filter_size, stride, paddign, pool, num_targetN, conditional=1):
+    def __init__(self, CNNLayerEncoder, CNNLayerDecoder, z_dim, filter_size, stride, paddign, pool, num_targetN, conditional=0):
         super(VAE, self).__init__()
 
         self.CNNlayer_encoder = CNNLayerEncoder
@@ -76,14 +78,15 @@ class VAE(nn.Module):
         self.pool = pool
         self.padding = paddign
         self.filter_size = filter_size
-        self.encoder_faltten = self._makeLayer_encoder(1, conditional=conditional)
-        self.encoder_unfaltten = self._makeLayer_encoder(0, conditional=conditional)
+        self.encoder_faltten = self._makeLayer_encoder(1)
+        self.encoder_unfaltten = self._makeLayer_encoder(0)
         self.conditional = conditional
         self.num_targetN = num_targetN
         if self.conditional:
             data = torch.rand((60, 2, 28, 28))
         else:
             data = torch.rand((60, 1, 28, 28))
+
         self.nhid = self.encoder_faltten(data).shape[-1]
         self.out_shape = self.encoder_unfaltten(data).shape
         self.emsize = self.out_shape[1:]
@@ -98,22 +101,14 @@ class VAE(nn.Module):
             self.fc = nn.Linear(z_dim, self.nhid)
 
 
-    def _makeLayer_encoder(self, flatten, conditional):
+    def _makeLayer_encoder(self, flatten):
         layers = []
-        if conditional:
-            layers.append(CNNBlock(2,
-                                   self.CNNlayer_encoder[0],
-                                   filter_size=self.filter_size,
-                                   stride=self.stride,
-                                   paddingsize=self.padding, pool=self.pool)
-                          )
-        else:
-            layers.append(CNNBlock(1,
-                                   self.CNNlayer_encoder[0],
-                                   filter_size=self.filter_size,
-                                   stride=self.stride,
-                                   paddingsize=self.padding, pool=self.pool)
-                          )
+        layers.append(CNNBlock(2,
+                               self.CNNlayer_encoder[0],
+                               filter_size=self.filter_size,
+                               stride=self.stride,
+                               paddingsize=self.padding, pool=self.pool)
+                      )
         for i in range(len(self.CNNlayer_encoder) - 1):
             layers.append(CNNBlock(self.CNNlayer_encoder[i],
                                    self.CNNlayer_encoder[i + 1],
@@ -159,12 +154,13 @@ class VAE(nn.Module):
         if self.conditional:
             label = self.embedding(label)
             z = torch.cat((z, label), dim=-1)
+
         z = self.fc(z)
         return self.decoder(z), mu, sigma
 
 
 if __name__ == '__main__':
-    input = torch.rand((20, 1, 28, 28))
+    input = torch.rand((20, 2, 28, 28))
     Layers = [8, 16]
     model = VAE(CNNLayerEncoder=Layers,
                 CNNLayerDecoder=[16, 8, 1],
@@ -176,7 +172,7 @@ if __name__ == '__main__':
                 num_targetN=5,
                 conditional=0)
 
-    print(model(input, 1))
+    print(model(input))
     print(model)
     summary(model, (2, 28, 28), batch_size=-1)
     print(model(input, 1)[0].shape)

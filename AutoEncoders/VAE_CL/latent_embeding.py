@@ -25,10 +25,11 @@ test_loader = torch.utils.data.DataLoader(
 
 
 torch.manual_seed(1)
-np.random.seed(1)
+seed = np.random.seed(1)
 
 Conditional = True
-Contrast = True
+Contrast = False
+
 
 if Contrast == True:
     Conditional = False
@@ -69,11 +70,13 @@ umap_hparams = {'n_neighbors': 5,
 
 
 fig, ax = plt.subplots(constrained_layout=False)
-ax.set(xticks=[], yticks=[])
+# ax.set(xticks=[], yticks=[])
+ax.set_xlim([-10, 20])
+ax.set_ylim([-10, 20])
 
 umap_embedding = umap.UMAP(n_neighbors=umap_hparams['n_neighbors'], min_dist=umap_hparams['min_dist'],
                            n_components=umap_hparams['n_components'],
-                           metric=umap_hparams['metric']).fit_transform(mu.detach().numpy())
+                           metric=umap_hparams['metric']).fit_transform(z.detach().numpy())
 scatter = ax.scatter(x=umap_embedding[:, 0], y=umap_embedding[:, 1], s=20, c=target, cmap='tab10')
 
 cbar = plt.colorbar(scatter, boundaries=np.arange(11)-0.5)

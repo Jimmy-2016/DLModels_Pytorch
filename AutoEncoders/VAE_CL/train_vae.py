@@ -9,7 +9,11 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 
 ## Params
-n_epochs = 10
+torch.manual_seed(1)
+np.random.seed(1)
+
+
+n_epochs = 20
 batch_size_train = 128
 batch_size_test = 10
 log_interval = 2
@@ -18,9 +22,10 @@ lr = 0.001
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
-Conditional = True
+Conditional = False
 
 Contrast = True
+
 
 if Contrast == True:
     Conditional = False
@@ -106,10 +111,13 @@ for i in range(n_epochs):
        input = tmpdata.view(tmpdata.shape[0], -1)
        re_const, mu, sigma, encoder_out, z = model(input, tmptar)
 
-       targetdist = torch.zeros((len(tmptar), len(tmptar)))
-       for tri in range(10):
-           indx = torch.where(tmptar == tri)[0]
-           targetdist[np.ix_(indx, indx)] = 1
+       if Contrast:
+           targetdist = torch.zeros((len(tmptar), len(tmptar)))
+           for tri in range(10):
+               indx = torch.where(tmptar == tri)[0]
+               targetdist[np.ix_(indx, indx)] = 1
+
+           targetdist = targetdist.view(-1)
 
        activations = []
 
@@ -119,14 +127,15 @@ for i in range(n_epochs):
 
        contrast_loss = 0
        if Contrast:
-           dist = torch.cdist(mu, mu)
+           dist = torch.cdist(z, z).view(-1)
 
            contrast_loss = (1 - targetdist) * torch.pow(dist, 2) \
-                  + (targetdist) * torch.pow(torch.clamp(2 - dist, min=0.0), 2)
+                  + (targetdist) * torch.pow(torch.clamp(1 - dist, min=0.0), 2)
            contrast_loss = torch.mean(contrast_loss)
 
            # contrastive_loss(dist, targetdist, margin=2)
-       loss += contrast_loss
+           loss += contrast_loss
+
        loss.backward()
        optimizer.step()
 
