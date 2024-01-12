@@ -9,7 +9,7 @@ import torchvision
 import umap
 
 
-batch_size_test = 20000
+batch_size_test = 2000
 
 test_loader = torch.utils.data.DataLoader(
     torchvision.datasets.MNIST('./data/', train=False, download=True,
@@ -31,16 +31,18 @@ Conditional = True
 Contrast = False
 
 
-if Contrast == True:
-    Conditional = False
+# if Contrast == True:
+#     Conditional = False
 
 if Conditional:
-    PATH = './saved_model/con_model.pth'
+    PATH = './saved_model/con_model1.pth'
 elif Contrast:
-    PATH = './saved_model/Contrast_model.pth'
+    PATH = './saved_model/Contrast_model1.pth'
 else:
-    PATH = './saved_model/nocon_model.pth'
+    PATH = './saved_model/nocon_model1.pth'
 
+if Contrast and Conditional:
+    PATH = './saved_model/concontrast_model1.pth'
 
 model = myVAE(layers=[784, 100, 50, 10], conditional=Conditional)
 
@@ -76,7 +78,7 @@ ax.set_ylim([-10, 20])
 
 umap_embedding = umap.UMAP(n_neighbors=umap_hparams['n_neighbors'], min_dist=umap_hparams['min_dist'],
                            n_components=umap_hparams['n_components'],
-                           metric=umap_hparams['metric']).fit_transform(z.detach().numpy())
+                           metric=umap_hparams['metric']).fit_transform(mu.detach().numpy())
 scatter = ax.scatter(x=umap_embedding[:, 0], y=umap_embedding[:, 1], s=20, c=target, cmap='tab10')
 
 cbar = plt.colorbar(scatter, boundaries=np.arange(11)-0.5)

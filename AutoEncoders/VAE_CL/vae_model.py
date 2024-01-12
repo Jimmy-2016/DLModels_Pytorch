@@ -13,12 +13,10 @@ class fc_layer(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Linear(num_in, num_out),
-            # nn.BatchNorm1d(num_out),
             nn.ReLU()
         )
 
     def forward(self, x):
-
         return self.fc(x)
 
 
@@ -67,7 +65,7 @@ class myVAE(nn.Module):
                 layers.append(fc_layer(self.reverse_layers[li], self.reverse_layers[li+1]))
 
             layers.append(nn.Sequential(nn.Linear(self.reverse_layers[-2], self.reverse_layers[-1]),
-                                        nn.LeakyReLU()))
+                                        nn.Sigmoid()))
 
         return nn.Sequential(*layers)
 

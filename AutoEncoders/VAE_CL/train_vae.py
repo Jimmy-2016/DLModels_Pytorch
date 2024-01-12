@@ -13,8 +13,8 @@ torch.manual_seed(1)
 np.random.seed(1)
 
 
-n_epochs = 20
-batch_size_train = 128
+n_epochs = 10
+batch_size_train = 64
 batch_size_test = 10
 log_interval = 2
 
@@ -22,13 +22,12 @@ lr = 0.001
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
-Conditional = False
+Conditional = True
+Contrast = False
 
-Contrast = True
 
-
-if Contrast == True:
-    Conditional = False
+# if Contrast == True:
+#     Conditional = False
 
 
 def disp_example(loader, indx):
@@ -81,16 +80,14 @@ test_loader = torch.utils.data.DataLoader(
 )
 
 
-def loss_fn(recon_x, x, mu, logvar):
+def loss_fn(recon_x, x, mu, sigma):
     # BCE = F.binary_cross_entropy(recon_x, x, size_average=False)
     BCE = F.mse_loss(recon_x, x, size_average=False)
 
     # see Appendix B from VAE paper:
-    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
-    # KLD = 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-    # logvar = torch.log((Sigma + 1e-8)**2)
-    # KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-    KLD = - 0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+
+    KLD = 0.5 * torch.sum(mu.pow(2) + sigma.pow(2) - torch.log(sigma.pow(2)) - 1).clamp(1000)
+
 
     return BCE + KLD, BCE, KLD
 
@@ -123,11 +120,11 @@ for i in range(n_epochs):
 
        optimizer.zero_grad()
        # tmptar = F.one_hot(tmptar)
-       loss, bce, kl = loss_fn(re_const, input, mu, torch.log(torch.pow(sigma + 1e-8, 2)))
+       loss, bce, kl = loss_fn(re_const, input, mu, torch.log(torch.pow(sigma + 1e-10, 2)))
 
        contrast_loss = 0
        if Contrast:
-           dist = torch.cdist(z, z).view(-1)
+           dist = torch.cdist(mu, mu).view(-1)
 
            contrast_loss = (1 - targetdist) * torch.pow(dist, 2) \
                   + (targetdist) * torch.pow(torch.clamp(1 - dist, min=0.0), 2)
@@ -146,12 +143,14 @@ for i in range(n_epochs):
            i,  loss.item()))
 
 if Conditional:
-    torch.save(model.state_dict(), './saved_model/con_model.pth')
+    torch.save(model.state_dict(), './saved_model/con_model1.pth')
 elif Contrast:
-    torch.save(model.state_dict(), './saved_model/Contrast_model.pth')
+    torch.save(model.state_dict(), './saved_model/Contrast_model1.pth')
 else:
-    torch.save(model.state_dict(), './saved_model/nocon_model.pth')
+    torch.save(model.state_dict(), './saved_model/nocon_model1.pth')
 
+if Contrast and Conditional:
+    torch.save(model.state_dict(), './saved_model/concontrast_model1.pth')
 
 torch.save(optimizer.state_dict(), './saved_model/optimizer.pth')
 

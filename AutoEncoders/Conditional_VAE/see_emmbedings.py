@@ -28,7 +28,7 @@ torch.manual_seed(1)
 np.random.seed(1)
 
 
-PATH = './saved_model/model_contrast.pth'
+PATH = './saved_model/model_nocon.pth'
 Conditional = 0
 
 z_dim = 4
