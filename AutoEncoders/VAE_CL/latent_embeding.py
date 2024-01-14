@@ -27,7 +27,7 @@ test_loader = torch.utils.data.DataLoader(
 torch.manual_seed(1)
 seed = np.random.seed(1)
 
-Conditional = True
+Conditional = False
 Contrast = False
 
 
