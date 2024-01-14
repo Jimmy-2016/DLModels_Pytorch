@@ -65,7 +65,7 @@ class myVAE(nn.Module):
                 layers.append(fc_layer(self.reverse_layers[li], self.reverse_layers[li+1]))
 
             layers.append(nn.Sequential(nn.Linear(self.reverse_layers[-2], self.reverse_layers[-1]),
-                                        nn.Sigmoid()))
+                                        nn.LeakyReLU()))
 
         return nn.Sequential(*layers)
 

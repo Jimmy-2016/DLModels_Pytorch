@@ -22,7 +22,7 @@ lr = 0.001
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
-Conditional = True
+Conditional = False
 Contrast = False
 
 
@@ -86,8 +86,10 @@ def loss_fn(recon_x, x, mu, sigma):
 
     # see Appendix B from VAE paper:
 
-    KLD = 0.5 * torch.sum(mu.pow(2) + sigma.pow(2) - torch.log(sigma.pow(2)) - 1).clamp(1000)
+    KLD = 0.5 * torch.mean(mu.pow(2) + sigma.pow(2) - torch.log(sigma.pow(2)) - 1).clamp(max=100)
 
+    if torch.isnan(KLD) or torch.isnan(BCE):
+        letmwknow = 1
 
     return BCE + KLD, BCE, KLD
 
@@ -120,7 +122,9 @@ for i in range(n_epochs):
 
        optimizer.zero_grad()
        # tmptar = F.one_hot(tmptar)
-       loss, bce, kl = loss_fn(re_const, input, mu, torch.log(torch.pow(sigma + 1e-10, 2)))
+       loss, bce, kl = loss_fn(re_const, input, mu, sigma)
+
+
 
        contrast_loss = 0
        if Contrast:
@@ -128,10 +132,12 @@ for i in range(n_epochs):
 
            contrast_loss = (1 - targetdist) * torch.pow(dist, 2) \
                   + (targetdist) * torch.pow(torch.clamp(1 - dist, min=0.0), 2)
-           contrast_loss = torch.mean(contrast_loss)
+           contrast_loss = torch.nansum(contrast_loss)
+           # if torch.isnan(contrast_loss):
+           #     letmeknow =1
 
            # contrastive_loss(dist, targetdist, margin=2)
-           loss += contrast_loss
+           loss += 0.05 * contrast_loss
 
        loss.backward()
        optimizer.step()
