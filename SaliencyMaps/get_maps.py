@@ -28,6 +28,7 @@ download("https://specials-images.forbesimg.com/imageserve/5db4c7b464b49a0007e9d
 img = Image.open('input.jpg')
 
 # img = Image.open(str('./1.jpg'))
+plt.figure()
 plt.imshow(img)
 
 ## load the model
@@ -76,9 +77,9 @@ across all colour channels.
 saliency, _ = torch.max(X.grad.data.abs(), dim=1)
 
 # code to plot the saliency map as a heatmap
+plt.figure()
 plt.imshow(saliency[0], cmap=plt.cm.hot)
 plt.axis('off')
-plt.show()
 
 
 plt.show()

@@ -16,7 +16,7 @@ def load_image(image_name):
 
 device = torch.device('cude' if torch.cuda.is_available() else 'cpu')
 print(device)
-imsize = 32
+imsize = 64
 
 
 loader = transform.Compose(
@@ -29,8 +29,14 @@ loader = transform.Compose(
 )
 
 original_img = load_image("org.png")
-# original_img = torch.rand_like(original_img)
 style_img = load_image("style.jpeg")
+
+plt.figure()
+plt.imshow(original_img.detach().squeeze(0)[0, :])
+
+plt.figure()
+plt.imshow(style_img.detach().squeeze(0)[0, :])
+
 
 gen_image = original_img.clone().requires_grad_(True)
 model = VGG().to(device).eval()  # to prevent from training
@@ -64,8 +70,12 @@ for steps in range(total_steps):
     if steps % 10 == 0:
         print(total_loss)
 
+
+
 plt.figure()
 plt.imshow(gen_image.detach().squeeze(0)[0, :])
+
+
 
 plt.show()
 
@@ -74,49 +84,6 @@ plt.show()
 
 
 
-
-
-
-
-
-
-
-
-# for step in range(total_steps):
-#     # Obtain the convolution features in specifically chosen layers
-#     generated_features = model(gen_image)
-#     original_img_features = model(original_img)
-#     style_features = model(style_img)
-#
-#     # Loss is 0 initially
-#     style_loss = original_loss = 0
-#
-#     # iterate through all the features for the chosen layers
-#     for gen_feature, orig_feature, style_feature in zip(
-#         generated_features, original_img_features, style_features
-#     ):
-#
-#         # batch_size will just be 1
-#         batch_size, channel, height, width = gen_feature.shape
-#         original_loss += torch.mean((gen_feature - orig_feature) ** 2)
-#         # Compute Gram Matrix of generated
-#         G = gen_feature.view(channel, height * width).mm(
-#             gen_feature.view(channel, height * width).t()
-#         )
-#         # Compute Gram Matrix of Style
-#         A = style_feature.view(channel, height * width).mm(
-#             style_feature.view(channel, height * width).t()
-#         )
-#         style_loss += torch.mean((G - A) ** 2)
-#
-#     total_loss = alpha * original_loss + beta * style_loss
-#     optimizer.zero_grad()
-#     total_loss.backward()
-#     optimizer.step()
-#
-#
-#
-#
 
 
 
