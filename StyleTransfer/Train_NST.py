@@ -42,7 +42,7 @@ gen_image = original_img.clone().requires_grad_(True)
 model = VGG().to(device).eval()  # to prevent from training
 
 # Hyperparameters
-total_steps = 1000
+total_steps = 100
 learning_rate = 0.001
 alpha = 1
 beta = 1
@@ -60,7 +60,7 @@ for steps in range(total_steps):
         org_loss += torch.mean(gen_feat - org_feat)**2
         batch, channel, w, h = gen_feat.shape
         G = gen_feat.view(channel, w * h).mm(gen_feat.view(channel, w * h).t())
-        A = st_feat.view(channel, w * h).mm(st_feat.view(channel, w *h).t())
+        A = st_feat.view(channel, w * h).mm(st_feat.view(channel, w * h).t())
         style_loss += torch.mean(A - G)**2
     total_loss = alpha * org_loss + beta * style_loss
     optimizer.zero_grad()
