@@ -48,16 +48,6 @@ print("conv_layers")
 
 ## Get the cnn layer by module method
 
-# model_weights_m =[]
-# conv_layers_m = []
-# model_modules = list(model.modules())
-#
-#
-# for module in model.modules():
-#     if isinstance(module, nn.Conv2d):
-#         model_weights_m.append(module.weight)
-#         conv_layers_m.append(module)
-
 
 ##
 
