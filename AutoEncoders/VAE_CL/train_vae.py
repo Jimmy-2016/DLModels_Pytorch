@@ -1,24 +1,33 @@
-import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from model import *
+from vae_model import *
 import torch.utils.data
 import matplotlib.pyplot as plt
 import torch.optim as optim
 
 ## Params
-n_epochs = 20
-batch_size_train = 128
-batch_size_test = 6
-log_interval = 2
-Conditional = 1
-lr = 0.01
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.manual_seed(1)
+np.random.seed(1)
 
+
+n_epochs = 10
+batch_size_train = 64
+batch_size_test = 10
+log_interval = 2
+
+lr = 0.001
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
+Conditional = False
+Contrast = False
+
+
+# if Contrast == True:
+#     Conditional = False
 
 
 def disp_example(loader, indx):
@@ -71,32 +80,26 @@ test_loader = torch.utils.data.DataLoader(
 )
 
 
-# disp_example(train_loader, 5)
-
-model = VAE(CNNLayerEncoder=[8, 16],
-                CNNLayerDecoder=[16, 8, 1],
-                  z_dim=5,
-                  stride=2,
-                  filter_size=3,
-                  pool=2,
-                  paddign=2,
-            num_targetN=4,
-            conditional=Conditional).to(device)
-model
-
-def loss_fn(recon_x, x, mu, logvar):
+def loss_fn(recon_x, x, mu, sigma):
     # BCE = F.binary_cross_entropy(recon_x, x, size_average=False)
     BCE = F.mse_loss(recon_x, x, size_average=False)
 
     # see Appendix B from VAE paper:
-    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
-    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-    KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+
+    KLD = 0.5 * torch.mean(mu.pow(2) + sigma.pow(2) - torch.log(sigma.pow(2)) - 1).clamp(max=100)
+
+    if torch.isnan(KLD) or torch.isnan(BCE):
+        letmwknow = 1
 
     return BCE + KLD, BCE, KLD
 
 
-# criteria = nn.CrossEntropyLoss()
+# disp_example(train_loader, 5)
+
+model = myVAE(layers=[784, 100, 50, 10], conditional=Conditional).to(device)
+modellayers = list(model.children())[0]
+model
+criteria = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 train_loss = []
 test_losses = []
@@ -104,22 +107,40 @@ for i in range(n_epochs):
    correct = 0
 
    for _, (tmpdata, tmptar) in enumerate(train_loader):
+       input = tmpdata.view(tmpdata.shape[0], -1)
+       re_const, mu, sigma, encoder_out, z = model(input, tmptar)
 
-       if Conditional:
-           tmpmat = tmptar.unsqueeze(0)*torch.ones(tmpdata.shape[-2], tmpdata.shape[-1]).unsqueeze(2)
-           tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-           input = torch.concat((tmpdata, tmpmat), dim=1)
-       else:
-           input=tmpdata
+       if Contrast:
+           targetdist = torch.zeros((len(tmptar), len(tmptar)))
+           for tri in range(10):
+               indx = torch.where(tmptar == tri)[0]
+               targetdist[np.ix_(indx, indx)] = 1
 
-       re_const, mu, sigma = model(input)
+           targetdist = targetdist.view(-1)
+
+       activations = []
 
        optimizer.zero_grad()
-       tmptar = F.one_hot(tmptar)
-       loss, bce, kl = loss_fn(re_const, tmpdata[:, :, :26, :26].float(), mu, torch.log(sigma**2))
+       # tmptar = F.one_hot(tmptar)
+       loss, bce, kl = loss_fn(re_const, input, mu, sigma)
+
+
+
+       contrast_loss = 0
+       if Contrast:
+           dist = torch.cdist(mu, mu).view(-1)
+
+           contrast_loss = (1 - targetdist) * torch.pow(dist, 2) \
+                  + (targetdist) * torch.pow(torch.clamp(1 - dist, min=0.0), 2)
+           contrast_loss = torch.nansum(contrast_loss)
+           # if torch.isnan(contrast_loss):
+           #     letmeknow =1
+
+           # contrastive_loss(dist, targetdist, margin=2)
+           loss += 0.05 * contrast_loss
+
        loss.backward()
        optimizer.step()
-       # correct += (predict.argmax(axis=1) == tmptar.argmax(axis=1)).sum()
 
    train_loss.append(loss.item())
 
@@ -127,31 +148,35 @@ for i in range(n_epochs):
        print('Train Epoch: {} \tLoss: {:.6f}'.format(
            i,  loss.item()))
 
-torch.save(model.state_dict(), './saved_model/model1.pth')
-torch.save(optimizer.state_dict(), './saved_model/optimizer1.pth')
+if Conditional:
+    torch.save(model.state_dict(), './saved_model/con_model1.pth')
+elif Contrast:
+    torch.save(model.state_dict(), './saved_model/Contrast_model1.pth')
+else:
+    torch.save(model.state_dict(), './saved_model/nocon_model1.pth')
+
+if Contrast and Conditional:
+    torch.save(model.state_dict(), './saved_model/concontrast_model1.pth')
+
+torch.save(optimizer.state_dict(), './saved_model/optimizer.pth')
 
 
 ##
 exmaple = enumerate(test_loader)
 batch_index, (data, target) = next(exmaple)
-if Conditional:
-    tmpmat = target.unsqueeze(0) * torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
-    tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-    input = torch.concat((data, tmpmat), dim=1)
-else:
-    input = data
 
-predict = model(input)[0]
+input = data.squeeze(1).view(data.shape[0], -1)
+
+predict = model(input, target)[0]
 
 for i in range(6):
     fig = plt.figure()
-    plt.imshow(np.squeeze(predict[i, :, :].detach()))
+    plt.imshow(predict[i, :].detach().view(28, 28))
 
 for i in range(6):
     fig = plt.figure()
     plt.imshow(np.squeeze(data[i, :, :].detach()))
 
-# plot_exmaples(data, model(data.view(data.shape[0], -1)))
 
 print('############## End #################')
 

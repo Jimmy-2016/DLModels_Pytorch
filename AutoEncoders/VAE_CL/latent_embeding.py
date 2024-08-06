@@ -1,6 +1,6 @@
 
 
-from model import *
+from vae_model import *
 import torch.utils.data
 import matplotlib.pyplot as plt
 import torch.optim as optim
@@ -9,7 +9,7 @@ import torchvision
 import umap
 
 
-batch_size_test = 20000
+batch_size_test = 2000
 
 test_loader = torch.utils.data.DataLoader(
     torchvision.datasets.MNIST('./data/', train=False, download=True,
@@ -25,47 +25,36 @@ test_loader = torch.utils.data.DataLoader(
 
 
 torch.manual_seed(1)
-np.random.seed(1)
+seed = np.random.seed(1)
+
+Conditional = False
+Contrast = False
 
 
-PATH = './saved_model/model_nocon.pth'
-Conditional = 0
+# if Contrast == True:
+#     Conditional = False
 
-z_dim = 4
-model = VAE(CNNLayerEncoder=[10, 16],
-                CNNLayerDecoder=[16, 10, 1],
-                  z_dim=4,
-                  stride=2,
-                  filter_size=3,
-                  pool=2,
-                  paddign=2,
-            num_targetN=8,
-            conditional=Conditional)
+if Conditional:
+    PATH = './saved_model/con_model1.pth'
+elif Contrast:
+    PATH = './saved_model/Contrast_model1.pth'
+else:
+    PATH = './saved_model/nocon_model1.pth'
+
+if Contrast and Conditional:
+    PATH = './saved_model/concontrast_model1.pth'
+
+model = myVAE(layers=[784, 100, 50, 10], conditional=Conditional)
+
 model.load_state_dict(torch.load(PATH))
 
 
 exmaple = enumerate(test_loader)
 batch_index, (data, target) = next(exmaple)
 
-if Conditional:
-    tmpmat = target.unsqueeze(0) * torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
-    tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-    input = torch.concat((data, tmpmat), dim=1)
-    re_const, mu, sigma = model(input, target)
-
-else:
-    input = data
-    # input = tmpdata
-    # input = torch.concat((tmpdata, tmptar * torch.ones_like(tmpdata)), dim=1)
-    re_const, mu, sigma = model(input)
-
-
-# tmpmat = target.unsqueeze(0)*torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
-# tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-# input = torch.concat((data, tmpmat), dim=1)
-#
-# latenlayer = model.encoder_unfaltten(input)[0]
-# out, mu, sigma = model(input, target)
+input = data.view(data.shape[0], -1)
+# latenlayer = model.encoder(input)
+out, mu, sigma, encoder_out, z = model(input, target)
 
 
 

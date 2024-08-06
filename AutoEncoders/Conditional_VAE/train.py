@@ -9,13 +9,16 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 
 ## Params
-n_epochs = 3
-batch_size_train = 64
+n_epochs = 5
+batch_size_train = 128
 batch_size_test = 6
 log_interval = 2
-Conditional = 1
 lr = 0.001
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+Contrast = True
+Conditional = 0
+
 
 print(device)
 
@@ -84,14 +87,14 @@ model = VAE(CNNLayerEncoder=[10, 16],
             conditional=Conditional).to(device)
 model
 
-def loss_fn(recon_x, x, mu, logvar):
+def loss_fn(recon_x, x, mu, sigma):
     # BCE = F.binary_cross_entropy(recon_x, x, size_average=False)
     BCE = F.mse_loss(recon_x, x, size_average=False)
 
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-    KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+    KLD = 0.5 * torch.sum(mu.pow(2) + sigma.pow(2) - torch.log(sigma.pow(2)) - 1)
 
     return BCE + KLD, BCE, KLD
 
@@ -105,21 +108,38 @@ for i in range(n_epochs):
 
    for _, (tmpdata, tmptar) in enumerate(train_loader):
 
-       # if Conditional:
-       tmpmat = tmptar.unsqueeze(0)*torch.ones(tmpdata.shape[-2], tmpdata.shape[-1]).unsqueeze(2)
-       tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-       input = torch.concat((tmpdata, tmpmat), dim=1)
-       # else:
-       #     input=tmpdata
-       # input = tmpdata
-       # input = torch.concat((tmpdata, tmptar * torch.ones_like(tmpdata)), dim=1)
+       if Conditional:
+           tmpmat = tmptar.unsqueeze(0)*torch.ones(tmpdata.shape[-2], tmpdata.shape[-1]).unsqueeze(2)
+           tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
+           input = torch.concat((tmpdata, tmpmat), dim=1)
+           re_const, mu, sigma = model(input, tmptar)
 
+       else:
+           input=tmpdata
+           # input = tmpdata
+           # input = torch.concat((tmpdata, tmptar * torch.ones_like(tmpdata)), dim=1)
+           re_const, mu, sigma = model(input)
 
-       re_const, mu, sigma = model(input, tmptar)
+       loss, bce, kl = loss_fn(re_const, tmpdata[:, :, :26, :26].float(), mu, torch.log(sigma**2))
+
+       if Contrast:
+           targetdist = torch.zeros((len(tmptar), len(tmptar)))
+           for tri in range(10):
+               indx = torch.where(tmptar == tri)[0]
+               targetdist[np.ix_(indx, indx)] = 1
+
+           targetdist = targetdist.view(-1)
+           dist = torch.cdist(mu, mu).view(-1)
+
+           contrast_loss = (1 - targetdist) * torch.pow(dist, 2) \
+                           + (targetdist) * torch.pow(torch.clamp(.1 - dist, min=0.0), 2)
+           contrast_loss = torch.mean(contrast_loss)
+
+           # contrastive_loss(dist, targetdist, margin=2)
+           loss += contrast_loss
 
        optimizer.zero_grad()
-       tmptar = F.one_hot(tmptar)
-       loss, bce, kl = loss_fn(re_const, tmpdata[:, :, :26, :26].float(), mu, sigma)
+       # tmptar = F.one_hot(tmptar)
        loss.backward()
        optimizer.step()
        # correct += (predict.argmax(axis=1) == tmptar.argmax(axis=1)).sum()
@@ -130,33 +150,33 @@ for i in range(n_epochs):
        print('Train Epoch: {} \tLoss: {:.6f}'.format(
            i,  loss.item()))
 
-torch.save(model.state_dict(), './saved_model/model2.pth')
-torch.save(optimizer.state_dict(), './saved_model/optimizer2.pth')
+torch.save(model.state_dict(), './saved_model/model_contrast.pth')
+torch.save(optimizer.state_dict(), './saved_model/optimizer1.pth')
 
 
 ##
-exmaple = enumerate(test_loader)
-batch_index, (data, target) = next(exmaple)
-tmpmat = target.unsqueeze(0)*torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
-tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-input = torch.concat((data, tmpmat), dim=1)
-
-# input = data
-
-predict = model(input, target)[0]
-
-for i in range(6):
-    fig = plt.figure()
-    plt.imshow(np.squeeze(predict[i, :, :].detach()))
-
-for i in range(6):
-    fig = plt.figure()
-    plt.imshow(np.squeeze(data[i, :, :].detach()))
-
-# plot_exmaples(data, model(data.view(data.shape[0], -1)))
-
-print('############## End #################')
-
+# exmaple = enumerate(test_loader)
+# batch_index, (data, target) = next(exmaple)
+# tmpmat = target.unsqueeze(0)*torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
+# tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
+# input = torch.concat((data, tmpmat), dim=1)
+#
+# # input = data
+#
+# predict = model(input, target)[0]
+#
+# for i in range(6):
+#     fig = plt.figure()
+#     plt.imshow(np.squeeze(predict[i, :, :].detach()))
+#
+# for i in range(6):
+#     fig = plt.figure()
+#     plt.imshow(np.squeeze(data[i, :, :].detach()))
+#
+# # plot_exmaples(data, model(data.view(data.shape[0], -1)))
+#
+# print('############## End #################')
+#
 
 
 
