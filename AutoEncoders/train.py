@@ -142,8 +142,8 @@ for i in range(n_epochs):
        print('Train Epoch: {} \tLoss: {:.6f}'.format(
            i,  loss.item()))
 
-torch.save(model.state_dict(), './saved_model/model_cvae.pth')
-torch.save(optimizer.state_dict(), './saved_model/optimizer1.pth')
+torch.save(model.state_dict(), 'saved_model/model_cvae.pth')
+torch.save(optimizer.state_dict(), 'saved_model/optimizer1.pth')
 
 
 ##

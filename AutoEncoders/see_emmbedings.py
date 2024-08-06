@@ -28,7 +28,7 @@ torch.manual_seed(1)
 np.random.seed(1)
 
 
-PATH = './saved_model/model_vae.pth'
+PATH = 'saved_model/model_vae.pth'
 Conditional = 0
 
 z_dim = 4

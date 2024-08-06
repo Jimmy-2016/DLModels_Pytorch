@@ -12,7 +12,7 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 torch.manual_seed(1)
 np.random.seed(1)
 
-PATH = './saved_model/model_cvae.pth'
+PATH = 'saved_model/model_cvae.pth'
 Conditional = 0
 
 z_dim = 4
