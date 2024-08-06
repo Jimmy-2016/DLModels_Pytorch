@@ -12,8 +12,8 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 torch.manual_seed(1)
 np.random.seed(1)
 
-
-PATH = './saved_model/model1.pth'
+PATH = './saved_model/model_cvae.pth'
+Conditional = 0
 
 z_dim = 4
 model = VAE(CNNLayerEncoder=[10, 16],
@@ -24,15 +24,17 @@ model = VAE(CNNLayerEncoder=[10, 16],
                   pool=2,
                   paddign=2,
             num_targetN=8,
-            conditional=1)
+            conditional=Conditional)
+
 model.load_state_dict(torch.load(PATH))
 
 num_example = 6
 noise = torch.randn((num_example, z_dim))
-condition_num = 1
+condition_num = 9
 label = condition_num * torch.ones(num_example).to(torch.int64)
 z = noise
-z = torch.cat((z, model.embedding(label)), dim=-1)
+if Conditional:
+    z = torch.cat((z, model.embedding(label)), dim=-1)
 predict = model.decoder(model.fc(z))
 
 for i in range(num_example):

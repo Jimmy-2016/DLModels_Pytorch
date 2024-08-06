@@ -9,7 +9,7 @@ import torchvision
 import umap
 
 
-batch_size_test = 20000
+batch_size_test = 2000
 
 test_loader = torch.utils.data.DataLoader(
     torchvision.datasets.MNIST('./data/', train=False, download=True,
@@ -28,7 +28,7 @@ torch.manual_seed(1)
 np.random.seed(1)
 
 
-PATH = './saved_model/model_nocon.pth'
+PATH = './saved_model/model_vae.pth'
 Conditional = 0
 
 z_dim = 4
@@ -51,25 +51,12 @@ if Conditional:
     tmpmat = target.unsqueeze(0) * torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
     tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
     input = torch.concat((data, tmpmat), dim=1)
-    re_const, mu, sigma = model(input, target)
+    re_const, mu, logvar = model(input, target)
 
 else:
     input = data
-    # input = tmpdata
-    # input = torch.concat((tmpdata, tmptar * torch.ones_like(tmpdata)), dim=1)
     re_const, mu, sigma = model(input)
 
-
-# tmpmat = target.unsqueeze(0)*torch.ones(data.shape[-2], data.shape[-1]).unsqueeze(2)
-# tmpmat = torch.permute(tmpmat, (2, 0, 1)).unsqueeze(1)
-# input = torch.concat((data, tmpmat), dim=1)
-#
-# latenlayer = model.encoder_unfaltten(input)[0]
-# out, mu, sigma = model(input, target)
-
-
-
-# plot_exmaples(data, model(data.view(data.shape[0], -1)))
 
 print('############## End #################')
 

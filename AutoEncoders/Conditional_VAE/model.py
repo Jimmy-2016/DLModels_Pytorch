@@ -91,7 +91,7 @@ class VAE(nn.Module):
         self.embedding = nn.Embedding(10, num_targetN)
         self.decoder = self._makeLayer_decoder()
         self.fc_mean = nn.Linear(self.nhid, z_dim)
-        self.fc_std = nn.Linear(self.nhid, z_dim)
+        self.fc_logvar = nn.Linear(self.nhid, z_dim)
         if self.conditional:
             self.fc = nn.Linear(z_dim+self.num_targetN, self.nhid)
         else:
@@ -153,14 +153,15 @@ class VAE(nn.Module):
 
         x = input
         x = self.encoder_faltten(x)
-        mu, sigma = self.fc_mean(x), self.fc_std(x)
-        epsilon = torch.randn_like(sigma)
+        mu, logvar = self.fc_mean(x), self.fc_logvar(x)
+        sigma = torch.exp(0.5 * logvar)
+        epsilon = torch.randn_like(logvar)
         z = mu + sigma * epsilon
         if self.conditional:
             label = self.embedding(label)
             z = torch.cat((z, label), dim=-1)
         z = self.fc(z)
-        return self.decoder(z), mu, sigma
+        return self.decoder(z), mu, logvar
 
 
 if __name__ == '__main__':
