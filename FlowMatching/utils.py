@@ -123,7 +123,7 @@ class TimeEmbedding(nn.Module):
 
 class FlowNeuralNetwork(FlowModel):
 
-    def __init__(self, n_features, time_embedding_size=8, n_blocks=5):
+    def __init__(self, n_features, time_embedding_size=8, n_blocks=2):
         super().__init__()
         self.time_embedding = TimeEmbedding(time_embedding_size)
         hidden_size = n_features + time_embedding_size
