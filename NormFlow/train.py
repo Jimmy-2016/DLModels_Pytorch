@@ -4,15 +4,14 @@ from utils import *
 
 ## Params
 d, k = 2, 1
-n_samples = 1024
+n_samples = 1000
 epochs = 1000
 batch_size = 128
 ##
-model = R_NVP(d, k, hidden=100)
-optim = torch.optim.Adam(model.parameters(), lr=0.1)
+model = stacked_NVP(d, k, hidden=100, n=3)
+optim = torch.optim.Adam(model.parameters(), lr=0.01)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, 0.999)
-# x_data = torch.randn(n_samples, 2)
-# target_data = torch.tensor(target_distribution(n_samples), dtype=torch.float32)
+
 
 losses = []
 for ep in range(epochs):
