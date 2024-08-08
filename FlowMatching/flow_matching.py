@@ -27,7 +27,7 @@ model = FlowNeuralNetwork(n_features=2, n_blocks=4)
 model.train()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
 
-for epoch in tqdm(range(100)):
+for epoch in tqdm(range(1000)):
     model.zero_grad()
     loss = conditional_flow_matching_loss(model, create_dataset(1000))
     loss.backward()
