@@ -3,63 +3,119 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
+from math import pi
+from sklearn import cluster, datasets, mixture
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+
+from torch.distributions.multivariate_normal import MultivariateNormal
+from torch.distributions import LogisticNormal
 
 
-# Define the affine coupling layer
-class AffineCouplingLayer(nn.Module):
-    def __init__(self, in_features):
-        super(AffineCouplingLayer, self).__init__()
-        self.in_features = in_features
-        self.split_size = in_features // 2
+## noise
+base_mu, base_cov = torch.zeros(2), torch.eye(2)
+base_dist = MultivariateNormal(base_mu, base_cov)
+Z = base_dist.rsample(sample_shape=(3000,))
 
-        # Define the neural network for the coupling layer
-        self.nn = nn.Sequential(
-            nn.Linear(self.split_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, self.split_size * 2)  # Output both scaling and shifting parameters
-        )
+## Target
+n_samples = 2000
+noisy_moons = datasets.make_moons(n_samples=n_samples, noise=.05)
+X, y = noisy_moons
+# normalize
+X = StandardScaler().fit_transform(X)
+
+
+class R_NVP(nn.Module):
+    def __init__(self, d, k, hidden):
+        super().__init__()
+        self.d, self.k = d, k
+        self.sig_net = nn.Sequential(
+            nn.Linear(k, hidden),
+            nn.LeakyReLU(),
+            nn.Linear(hidden, d - k))
+
+        self.mu_net = nn.Sequential(
+            nn.Linear(k, hidden),
+            nn.LeakyReLU(),
+            nn.Linear(hidden, d - k))
+
+    def forward(self, x, flip=False):
+        x1, x2 = x[:, :self.k], x[:, self.k:]
+
+        if flip:
+            x2, x1 = x1, x2
+
+        # forward
+        sig = self.sig_net(x1)
+        z1, z2 = x1, x2 * torch.exp(sig) + self.mu_net(x1)
+
+        if flip:
+            z2, z1 = z1, z2
+
+        z_hat = torch.cat([z1, z2], dim=-1)
+
+        log_pz = base_dist.log_prob(z_hat)
+        log_jacob = sig.sum(-1)
+
+        return z_hat, log_pz, log_jacob
+
+    def inverse(self, Z, flip=False):
+        z1, z2 = Z[:, :self.k], Z[:, self.k:]
+
+        if flip:
+            z2, z1 = z1, z2
+
+        x1 = z1
+        x2 = (z2 - self.mu_net(z1)) * torch.exp(-self.sig_net(z1))
+
+        if flip:
+            x2, x1 = x1, x2
+        return torch.cat([x1, x2], -1)
+
+
+class stacked_NVP(nn.Module):
+    def __init__(self, d, k, hidden, n):
+        super().__init__()
+        self.bijectors = nn.ModuleList([
+            R_NVP(d, k, hidden=hidden) for _ in range(n)
+        ])
+        self.flips = [True if i % 2 else False for i in range(n)]
 
     def forward(self, x):
-        x1, x2 = x[:, :self.split_size], x[:, self.split_size:]
-        params = self.nn(x1)
-        s, t = params[:, :self.split_size], params[:, self.split_size:]
-        s = torch.tanh(s)  # Ensure the scaling is bounded
-        x2 = x2 * torch.exp(s) + t
-        return torch.cat([x1, x2], dim=1), s
+        log_jacobs = []
 
-    def inverse(self, y):
-        y1, y2 = y[:, :self.split_size], y[:, self.split_size:]
-        params = self.nn(y1)
-        s, t = params[:, :self.split_size], params[:, self.split_size:]
-        s = torch.tanh(s)
-        y2 = (y2 - t) * torch.exp(-s)
-        return torch.cat([y1, y2], dim=1), s
+        for bijector, f in zip(self.bijectors, self.flips):
+            x, log_pz, lj = bijector(x, flip=f)
+            log_jacobs.append(lj)
+
+        return x, log_pz, sum(log_jacobs)
+
+    def inverse(self, z):
+        for bijector, f in zip(reversed(self.bijectors), reversed(self.flips)):
+            z = bijector.inverse(z, flip=f)
+        return z
 
 
-# Define the normalizing flow model
-class NormalizingFlow(nn.Module):
-    def __init__(self, in_features, num_layers):
-        super(NormalizingFlow, self).__init__()
-        self.layers = nn.ModuleList([AffineCouplingLayer(in_features) for _ in range(num_layers)])
+def view(model, losses):
+    plt.figure()
+    plt.plot(losses)
+    plt.title("Model Loss vs Epoch")
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
 
-    def forward(self, x):
-        log_det_jacobian = 0
-        for layer in self.layers:
-            x, s = layer(x)
-            log_det_jacobian += s.sum(dim=1)
-        return x, log_det_jacobian
+    plt.figure()
+    X_hat = model.inverse(Z).detach().numpy()
+    plt.scatter(X_hat[:, 0], X_hat[:, 1])
+    plt.title("Inverse of Normal Samples Z: X = F^-1(Z)")
 
-    def inverse(self, y):
-        for layer in reversed(self.layers):
-            y, s = layer.inverse(y)
-        return y
+    plt.figure()
+    n_samples = 3000
+    X, _ = datasets.make_moons(n_samples=n_samples, noise=.05)
+    X = torch.from_numpy(StandardScaler().fit_transform(X)).float()
+    z, _, _ = model(X)
+    z = z.detach().numpy()
+    plt.scatter(z[:, 0], z[:, 1])
+    plt.title("Transformation of Data Samples X: Z = F(X)")
 
-
-# Generate the target distribution (circle)
-def target_distribution(num_samples):
-    theta = np.linspace(0, 2 * np.pi, num_samples)
-    r = 1  # Radius of the circle
-    x = r * np.cos(theta)
-    y = r * np.sin(theta)
-    return np.vstack([x, y]).T
+    plt.show()
 

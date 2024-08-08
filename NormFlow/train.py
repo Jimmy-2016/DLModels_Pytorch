@@ -2,46 +2,31 @@
 from utils import *
 
 
-# Training setup
-num_samples = 1000
-in_features = 2
-num_layers = 5
-model = NormalizingFlow(in_features, num_layers)
-optimizer = optim.Adam(model.parameters(), lr=0.01)
-criterion = nn.MSELoss()
+## Params
+d, k = 2, 1
+n_samples = 1024
+epochs = 10000
+batch_size = 128
+##
+model = R_NVP(d, k, hidden=100)
+optim = torch.optim.Adam(model.parameters(), lr=1e-3)
+scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, 0.999)
+# x_data = torch.randn(n_samples, 2)
+# target_data = torch.tensor(target_distribution(n_samples), dtype=torch.float32)
 
-# Generate synthetic data (Gaussian noise)
-x_data = torch.randn(num_samples, in_features)
+losses = []
+for _ in range(epochs):
+    # get batch
+    X, _ = datasets.make_moons(n_samples=batch_size, noise=.05)
+    X = torch.from_numpy(StandardScaler().fit_transform(X)).float()
 
-# Target data
-target_data = torch.tensor(target_distribution(num_samples), dtype=torch.float32)
+    optim.zero_grad()
+    z, log_pz, log_jacob = model(X)
+    loss = (-log_pz - log_jacob).mean()
+    losses.append(loss.item())
 
-# Training loop
-for epoch in range(10000):
-    model.train()
-    optimizer.zero_grad()
-
-    # Forward pass
-    x_transformed, log_det_jacobian = model(x_data)
-
-    # Calculate the loss
-    loss = criterion(x_transformed, target_data)
     loss.backward()
-    optimizer.step()
+    optim.step()
+    scheduler.step()
 
-    if epoch % 100 == 0:
-        print(f'Epoch {epoch}, Loss: {loss.item()}')
-
-# Visualize the results
-with torch.no_grad():
-    model.eval()
-    x_transformed, _ = model(x_data)
-
-    plt.figure(figsize=(8, 8))
-    plt.scatter(target_data[:, 0], target_data[:, 1], label='Target Distribution', alpha=0.5)
-    plt.scatter(x_transformed[:, 0], x_transformed[:, 1], label='Transformed Distribution', alpha=0.5)
-    plt.title('Normalizing Flow Transformation')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.legend()
-    plt.show()
+view(model, losses)
