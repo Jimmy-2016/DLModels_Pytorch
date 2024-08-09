@@ -5,7 +5,7 @@ from utils import *
 ## Params
 d, k = 2, 1
 n_samples = 1000
-epochs = 1000
+epochs = 10000
 batch_size = 128
 ##
 model = stacked_NVP(d, k, hidden=100, n=3)

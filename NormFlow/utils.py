@@ -110,11 +110,11 @@ def view(model, losses):
 
     plt.figure()
     n_samples = 3000
-    X, _ = datasets.make_moons(n_samples=n_samples, noise=.05)
-    X = torch.from_numpy(StandardScaler().fit_transform(X)).float()
-    z, _, _ = model(X)
-    z = z.detach().numpy()
-    plt.scatter(z[:, 0], z[:, 1])
+    # X, _ = datasets.make_moons(n_samples=n_samples, noise=.05)
+    # X = torch.from_numpy(StandardScaler().fit_transform(X)).float()
+    # z, _, _ = model(X)
+    # z = z.detach().numpy()
+    plt.scatter(X[:, 0], X[:, 1])
     plt.title("Transformation of Data Samples X: Z = F(X)")
 
     plt.show()
