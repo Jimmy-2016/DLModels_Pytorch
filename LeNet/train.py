@@ -7,9 +7,10 @@ from model import *
 import torch.utils.data
 import matplotlib.pyplot as plt
 import torch.optim as optim
+import os
 
 ## Params
-n_epochs = 3
+n_epochs = 2
 batch_size_train = 128
 batch_size_test = 6
 log_interval = 2
@@ -104,8 +105,11 @@ for i in range(n_epochs):
            i,  loss.item()))
        print(100. * correct / len(train_loader.dataset))
 
-torch.save(model.state_dict(), './saved_model/model.pth')
-torch.save(optimizer.state_dict(), './saved_model/optimizer.pth')
+save_dir = './saved_model'
+os.makedirs(save_dir, exist_ok=True)
+
+torch.save(model.state_dict(), os.path.join(save_dir, 'model.pth'))
+torch.save(optimizer.state_dict(), os.path.join(save_dir, 'optimizer.pth'))
 
 
 ##
