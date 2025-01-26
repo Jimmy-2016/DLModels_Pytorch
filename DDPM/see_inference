@@ -1,0 +1,36 @@
+
+from utils import *
+# device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+device = torch.device("cpu")
+
+load_path = '/Users/jamalesmaily/Desktop/Cambridge/Projects/DL_models1/DLModels_Pytorch/DDPM/checkpoints/'
+
+# checkpoint = torch.load(load_path + 'model2.pth')
+inference(modelshape=[4, 8, 16, 32, 32, 24], checkpoint_path=load_path + 'model3.pth',)
+
+
+# times = [0,15,50,100,300,999]
+# images = []
+# with torch.no_grad():
+#     model = ema.module.eval()
+#     for i in range(2):
+#         z = torch.randn(1, 1, 32, 32)
+#         for t in reversed(range(1, num_time_steps)):
+#             t = [t]
+#             temp = (scheduler.beta[t]/( (torch.sqrt(1-scheduler.alpha[t]))*(torch.sqrt(1-scheduler.beta[t])) ))
+#             z = (1/(torch.sqrt(1-scheduler.beta[t])))*z - (temp*model(z.to(device),t).cpu())
+#             if t[0] in times:
+#                 images.append(z)
+#             e = torch.randn(1, 1, 32, 32)
+#             z = z + (e*torch.sqrt(scheduler.beta[t]))
+#         temp = scheduler.beta[0]/( (torch.sqrt(1-scheduler.alpha[0]))*(torch.sqrt(1-scheduler.beta[0])) )
+#         x = (1/(torch.sqrt(1-scheduler.beta[0])))*z - (temp*model(z.to(device),[0]).cpu())
+
+#         images.append(x)
+#         x = rearrange(x.squeeze(0), 'c h w -> h w c').detach()
+#         x = x.numpy()
+#         plt.imshow(x)
+#         # plt.show()
+#         display_reverse(images)
+#         images = []
+

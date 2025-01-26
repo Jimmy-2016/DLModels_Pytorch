@@ -12,15 +12,17 @@ from tqdm import tqdm #pip install tqdm
 import matplotlib.pyplot as plt #pip install matplotlib
 import torch.optim as optim
 import numpy as np
+import os
 
-device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
-print(f"Using device: {device}")
+# device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+# print(f"Using device: {device}")
 
-print(torch.backends.mps.is_available())
-print(torch.device("mps"))
+# print(torch.backends.mps.is_available())
+# print(torch.device("mps"))
+device = torch.device("cpu")
 
 class SinusoidalEmbeddings(nn.Module):
-    def __init__(self, time_steps:int, embed_dim: int):
+    def __init__(self, time_steps:int, embed_dim: int, device: torch.device = 'cpu'):
         super().__init__()
         position = torch.arange(time_steps).unsqueeze(1).float()
         div = torch.exp(torch.arange(0, embed_dim, 2).float() * -(math.log(10000.0) / embed_dim))
@@ -30,7 +32,7 @@ class SinusoidalEmbeddings(nn.Module):
         self.embeddings = embeddings
 
     def forward(self, x, t):
-        embeds = self.embeddings[t].to(x.device)
+        embeds = self.embeddings.to(x.device)[t]
         return embeds[:, :, None, None]
 
 # Residual Blocks
@@ -69,7 +71,7 @@ class Attention(nn.Module):
         x = F.scaled_dot_product_attention(q,k,v, is_causal=False, dropout_p=self.dropout_prob)
         x = rearrange(x, 'b H (h w) C -> b h w (C H)', h=h, w=w)
         x = self.proj2(x)
-        return rearrange(x, 'b h w C -> b C h w')
+        return rearrange(x, 'b h w C -> b C h w').contiguous()
 
 
 
@@ -96,7 +98,7 @@ class UnetLayer(nn.Module):
         if hasattr(self, 'attention_layer'):
             x = self.attention_layer(x)
         x = self.ResBlock2(x, embeddings)
-        return self.conv(x), x
+        return self.conv(x).contiguous(), x
 
 
 class UNET(nn.Module):
@@ -104,9 +106,9 @@ class UNET(nn.Module):
             Channels: List = [64, 128, 256, 512, 512, 384],
             Attentions: List = [False, True, False, False, False, True],
             Upscales: List = [False, False, False, True, True, True],
-            num_groups: int = 32,
+            num_groups: int = 4,
             dropout_prob: float = 0.1,
-            num_heads: int = 8,
+            num_heads: int = 2,
             input_channels: int = 1,
             output_channels: int = 1,
             time_steps: int = 1000):
@@ -140,23 +142,25 @@ class UNET(nn.Module):
         for i in range(self.num_layers//2, self.num_layers):
             layer = getattr(self, f'Layer{i+1}')
             x = torch.concat((layer(x, embeddings)[0], residuals[self.num_layers-i-1]), dim=1)
-        return self.output_conv(self.relu(self.late_conv(x)))
+        return self.output_conv(self.relu(self.late_conv(x))).contiguous()
 
 
 class DDPM_Scheduler(nn.Module):
-    def __init__(self, num_time_steps: int=1000):
+    def __init__(self, num_time_steps: int=1000, device: torch.device = "cpu"):
         super().__init__()
         self.beta = torch.linspace(1e-4, 0.02, num_time_steps)
         self.beta.requires_grad_(False)
         alpha = 1 - self.beta
         self.alpha = torch.cumprod(alpha, dim=0).requires_grad_(False)
+        self.alpha = self.alpha.to(device)
+        self.beta = self.beta.to(device)
 
     def forward(self, t):
         return self.beta[t], self.alpha[t]
 
 def set_seed(seed: int = 42):
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    # torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     np.random.seed(seed)
@@ -174,11 +178,11 @@ def display_reverse(images: List):
         ax.axis('off')
     plt.show()
 
-def inference(checkpoint_path: str=None,
+def inference(modelshape, checkpoint_path: str=None,
               num_time_steps: int=1000,
               ema_decay: float=0.9999, ):
     checkpoint = torch.load(checkpoint_path)
-    model = UNET().cuda()
+    model = UNET(modelshape).to(device)
     model.load_state_dict(checkpoint['weights'])
     ema = ModelEmaV3(model, decay=ema_decay)
     ema.load_state_dict(checkpoint['ema'])
@@ -193,13 +197,13 @@ def inference(checkpoint_path: str=None,
             for t in reversed(range(1, num_time_steps)):
                 t = [t]
                 temp = (scheduler.beta[t]/( (torch.sqrt(1-scheduler.alpha[t]))*(torch.sqrt(1-scheduler.beta[t])) ))
-                z = (1/(torch.sqrt(1-scheduler.beta[t])))*z - (temp*model(z.cuda(),t).cpu())
+                z = (1/(torch.sqrt(1-scheduler.beta[t])))*z - (temp*model(z.to(device),t).cpu())
                 if t[0] in times:
                     images.append(z)
                 e = torch.randn(1, 1, 32, 32)
                 z = z + (e*torch.sqrt(scheduler.beta[t]))
             temp = scheduler.beta[0]/( (torch.sqrt(1-scheduler.alpha[0]))*(torch.sqrt(1-scheduler.beta[0])) )
-            x = (1/(torch.sqrt(1-scheduler.beta[0])))*z - (temp*model(z.cuda(),[0]).cpu())
+            x = (1/(torch.sqrt(1-scheduler.beta[0])))*z - (temp*model(z.to(device),[0]).cpu())
 
             images.append(x)
             x = rearrange(x.squeeze(0), 'c h w -> h w c').detach()
